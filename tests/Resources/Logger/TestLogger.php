@@ -12,6 +12,6 @@ final class TestLogger extends AbstractLogger
 
     public function log($level, $message, array $context = []): void
     {
-        $this->records[] = compact('level', 'message', 'context');
+        $this->records[] = \compact('level', 'message', 'context');
     }
 }

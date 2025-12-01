@@ -36,6 +36,6 @@ final class ZJKizaHttpResponseValidatorBundleTestKernel extends Kernel
             ],
         ]);
 
-        $container->import(__DIR__ . '/config/services_test.yaml');
+        $container->import(__DIR__.'/config/services_test.yaml');
     }
 }

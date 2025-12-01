@@ -11,8 +11,8 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Contracts\HttpClient\ResponseInterface;
-
 use ZJKiza\HttpResponseValidator\Exception\RuntimeException;
+
 use function ZJKiza\HttpResponseValidator\addIdInMessage;
 
 final class HttpResponseLogger

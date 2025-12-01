@@ -40,27 +40,26 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
     public function testSuccess(): void
     {
-        set_exception_handler(null);
-
         $data = [
             'name' => 'Foo',
             'email' => 'foo@test.com',
             'password' => 'password123',
-            'tokenTTL' => 'password123'
+            'tokenTTL' => 'password123',
         ];
 
         $mockResponse = new MockResponse(
-            json_encode($data),
+            \json_encode($data),
             [
                 'response_headers' => [
                     'content-type' => 'application/json',
                 ],
-                'http_code' => 201
+                'http_code' => 201,
             ]
         );
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
+        restore_exception_handler();
 
         $result = Result::success($response)
             ->bind($this->handlerFactory->create(HttpResponseLoggerHandler::class)->setExpectedStatus(201)->addSensitiveKeys(['tokenTTL']))
@@ -72,7 +71,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
             'name' => 'Foo',
             'email' => 'foo@test.com',
             'password' => 'password123',
-            'tokenTTL' => 'password123'
+            'tokenTTL' => 'password123',
         ];
 
         $this->assertSame($expected, $result);
@@ -80,22 +79,20 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
     public function testExpectExceptionForUnexpectedStatusCode(): void
     {
-        set_exception_handler(null);
-
         $data = [
             'name' => 'Foo',
             'email' => 'foo@test.com',
             'password' => 'password123',
-            'tokenTTL' => 'password123'
+            'tokenTTL' => 'password123',
         ];
 
         $mockResponse = new MockResponse(
-            json_encode($data),
+            \json_encode($data),
             [
                 'response_headers' => [
                     'content-type' => 'application/json',
                 ],
-                'http_code' => 200
+                'http_code' => 200,
             ]
         );
 
@@ -104,12 +101,15 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
+        restore_exception_handler();
 
         $result = Result::success($response)
-            ->bind($this->handlerFactory
+            ->bind(
+                $this->handlerFactory
                 ->create(HttpResponseLoggerHandler::class)
                     ->setExpectedStatus(201)
-                    ->addSensitiveKeys(['tokenTTL']
+                    ->addSensitiveKeys(
+                        ['tokenTTL']
                     )
             );
 
@@ -125,7 +125,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
                 'context' => [
                     'http_request_failed' => [
                         'method' => 'GET',
-                        'url' => "https://example.com/",
+                        'url' => 'https://example.com/',
                         'options' => function ($value) {
                             $this->assertIsArray($value);
                         },
@@ -135,10 +135,10 @@ final class HttpResponseValidatorTest extends KernelTestCase
                                 'name' => 'Foo',
                                 'email' => 'foo@test.com',
                                 'password' => '***',
-                                'tokenTTL' => '***'
+                                'tokenTTL' => '***',
                             ];
 
-                            $this->assertSame($expected, json_decode($value, true));
+                            $this->assertSame($expected, \json_decode($value, true));
                         },
                     ],
                 ],
@@ -164,8 +164,6 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
     public function testExpectExceptionForInvalidJsonFormat(): void
     {
-        set_exception_handler(null);
-
         /** @var TestLogger $logger */
         $logger = $this->getContainer()->get(TestLogger::class);
 
@@ -177,12 +175,13 @@ final class HttpResponseValidatorTest extends KernelTestCase
                 'response_headers' => [
                     'content-type' => 'application/json',
                 ],
-                'http_code' => 200
+                'http_code' => 200,
             ]
         );
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
+        restore_exception_handler();
 
         $result = Result::success($response)
             ->bind($this->handlerFactory->create(ExtractResponseJsonHandler::class)->setAssociative());
@@ -191,16 +190,16 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $expected = [
             [
-                'level' =>'error',
+                'level' => 'error',
                 'message' => function (string $message) {
                     $pattern = '/^[ZJKiza\\\\HttpResponseValidator\\\\Handler\\\\ExtractResponseJsonHandler\] Message ID=[a-f0-9]+ : PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ExtractResponseJsonHandler\] Syntax error$/';
                     self::assertThat($message, new RegularExpression($pattern));
                 },
-                'context' => function ($trace){
+                'context' => function ($trace) {
                     $this->assertIsArray($trace);
-                }
+                },
 
-            ]
+            ],
         ];
 
         PhpUnitTool::assertArrayRecords($logger->records, $expected);
@@ -210,8 +209,6 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
     public function testExpectExceptionForValidateArrayKeysWhereKeyNotExist(): void
     {
-        set_exception_handler(null);
-
         $data = [
             'name' => 'Foo',
             'email' => 'foo@test.com',
@@ -222,27 +219,27 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $result = Result::success($data)
             ->bind($this->handlerFactory->create(ValidateArrayKeysExistHandler::class)->setKeys(['name', 'lorem']));
+        restore_exception_handler();
 
 
         $this->expectException(InvalidArgumentException::class);
 
         $expected = [
             [
-                'level' =>'error',
+                'level' => 'error',
                 'message' => function (string $message) {
                     $pattern = '/^\[ZJKiza\\\HttpResponseValidator\\\Handler\\\ValidateArrayKeyExistHandler\] Message ID=[a-f0-9]+ :  PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ValidateArrayKeyExistHandler\] There is no required field "lorem" in the array \(name, email\)\.$/';
                     self::assertThat($message, new RegularExpression($pattern));
                 },
-                'context' => function ($trace){
+                'context' => function ($trace) {
                     $this->assertIsArray($trace);
-                }
+                },
 
-            ]
+            ],
         ];
 
         PhpUnitTool::assertArrayRecords($logger->records, $expected);
 
         $result->getOrThrow();
     }
-
 }
