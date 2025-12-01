@@ -8,6 +8,7 @@ use PHPUnit\Framework\Constraint\RegularExpression;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use ZJKiza\HttpResponseValidator\Contract\HandlerFactoryInterface;
+use ZJKiza\HttpResponseValidator\Exception\InvalidArgumentException;
 use ZJKiza\HttpResponseValidator\Exception\RuntimeException;
 use ZJKiza\HttpResponseValidator\Handler\ExtractResponseJsonHandler;
 use ZJKiza\HttpResponseValidator\Handler\HttpResponseLoggerHandler;
@@ -192,7 +193,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
             [
                 'level' =>'error',
                 'message' => function (string $message) {
-                    $pattern = '/^\[ZJKiza\\\\HttpResponseValidator\\\\Handler\\\\ExtractResponseJsonHandler\] Message ID=[a-f0-9]+ : PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ExtractResponseJsonHandler\] Syntax error$/';
+                    $pattern = '/^[ZJKiza\\\\HttpResponseValidator\\\\Handler\\\\ExtractResponseJsonHandler\] Message ID=[a-f0-9]+ : PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ExtractResponseJsonHandler\] Syntax error$/';
                     self::assertThat($message, new RegularExpression($pattern));
                 },
                 'context' => function ($trace){
@@ -206,4 +207,42 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $result->getOrThrow();
     }
+
+    public function testExpectExceptionForValidateArrayKeysWhereKeyNotExist(): void
+    {
+        set_exception_handler(null);
+
+        $data = [
+            'name' => 'Foo',
+            'email' => 'foo@test.com',
+        ];
+
+        /** @var TestLogger $logger */
+        $logger = $this->getContainer()->get(TestLogger::class);
+
+        $result = Result::success($data)
+            ->bind($this->handlerFactory->create(ValidateArrayKeysExistHandler::class)->setKeys(['name', 'lorem']));
+
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $expected = [
+            [
+                'level' =>'error',
+                'message' => function (string $message) {
+                    $pattern = '/^\[ZJKiza\\\HttpResponseValidator\\\Handler\\\ValidateArrayKeyExistHandler\] Message ID=[a-f0-9]+ :  PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ValidateArrayKeyExistHandler\] There is no required field "lorem" in the array \(name, email\)\.$/';
+                    self::assertThat($message, new RegularExpression($pattern));
+                },
+                'context' => function ($trace){
+                    $this->assertIsArray($trace);
+                }
+
+            ]
+        ];
+
+        PhpUnitTool::assertArrayRecords($logger->records, $expected);
+
+        $result->getOrThrow();
+    }
+
 }
