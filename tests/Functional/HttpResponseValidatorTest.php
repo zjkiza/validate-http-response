@@ -126,9 +126,6 @@ final class HttpResponseValidatorTest extends KernelTestCase
                     'http_request_failed' => [
                         'method' => 'GET',
                         'url' => 'https://example.com/',
-                        'options' => function ($value) {
-                            $this->assertIsArray($value);
-                        },
                         'body' => function ($value) {
 
                             $expected = [

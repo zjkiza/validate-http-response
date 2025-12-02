@@ -92,7 +92,6 @@ final class HttpResponseLogger
             'url' => isset($info['url']) && \is_string($info['url'])
                 ? $info['url']
                 : 'UNKNOWN',
-            'options' => $response->getRequestOptions(),
             'code' => isset($info['http_code']) && \is_int($info['http_code'])
                 ? $info['http_code']
                 : $response->getStatusCode(),
