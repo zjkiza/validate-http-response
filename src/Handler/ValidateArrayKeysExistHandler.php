@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace ZJKiza\HttpResponseValidator\Handler;
 
 use ZJKiza\HttpResponseValidator\Contract\HandlerInterface;
+use ZJKiza\HttpResponseValidator\Exception\InvalidArgumentException;
 use ZJKiza\HttpResponseValidator\Exception\InvalidPropertyValueException;
 use ZJKiza\HttpResponseValidator\Handler\Factory\TagIndexMethod;
-use ZJKiza\HttpResponseValidator\Monad\Failure;
 use ZJKiza\HttpResponseValidator\Monad\Result;
+
+use function ZJKiza\HttpResponseValidator\addIdInMessage;
 
 /**
  * @implements HandlerInterface<array<string, mixed>, array<string, mixed>>
@@ -19,6 +21,9 @@ final class ValidateArrayKeysExistHandler extends AbstractHandler implements Han
 
     /** @var string[] */
     private array $keys = [];
+
+    /** @var string[] */
+    private array $keysMissing = [];
 
     /**
      * @param array<string, mixed> $value
@@ -32,14 +37,26 @@ final class ValidateArrayKeysExistHandler extends AbstractHandler implements Han
         }
 
         foreach ($this->keys as $key) {
-            $result = (new ValidateArrayKeyExistHandler($this->logger))($value, $key);
-
-            if ($result instanceof Failure) {
-                return $result;
+            if (\array_key_exists($key, $value)) {
+                continue;
             }
+
+            $this->keysMissing[] = $key;
         }
 
-        return Result::success($value);
+        if (false === (bool) $this->keysMissing) {
+            return Result::success($value);
+        }
+
+        $message = \sprintf(
+            '%s [ValidateArrayKeysExistHandler] There is no required fields "%s" in the array (%s).',
+            addIdInMessage(),
+            \implode(', ', $this->keysMissing),
+            \implode(', ', \array_keys($value))
+        );
+
+        /** @var Result<array<string, mixed>> */
+        return $this->fail($message, InvalidArgumentException::class);
     }
 
     /**

@@ -51,9 +51,9 @@ abstract class Result implements ResultInterface
      *
      * @return Result<E>
      */
-    public static function failure(mixed $error): self
+    public static function failure(mixed $error, ?\Throwable $exception = null): self
     {
-        return new Failure($error);
+        return new Failure($error, $exception);
     }
 
     /**

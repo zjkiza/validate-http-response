@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ZJKiza\HttpResponseValidator\Handler;
 
 use Psr\Log\LoggerInterface;
-use ZJKiza\HttpResponseValidator\Monad\Failure;
 use ZJKiza\HttpResponseValidator\Monad\Result;
 
 use function ZJKiza\HttpResponseValidator\addIdInMessage;
@@ -52,7 +51,7 @@ abstract class AbstractHandler
         $exception = new $exceptionClass($overrideMessage, $errorCode);
 
         /** @psalm-suppress LessSpecificReturnStatement */
-        return new Failure($loggerMessage, $exception);
+        return Result::failure($loggerMessage, $exception);
     }
 
     /**

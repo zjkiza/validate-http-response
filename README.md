@@ -181,4 +181,4 @@ MIT. View the `LICENSE' file in the repository.
 
 ## What else needs to be done
 [ ] Update readme
-[ ] When ValidateArrayKeysExistHandler encounters the first error in the keys, it does not immediately throw an exception, but collects all the missing keys and only then throws the exception. 
+[+] When ValidateArrayKeysExistHandler encounters the first error in the keys, it does not immediately throw an exception, but collects all the missing keys and only then throws the exception. 

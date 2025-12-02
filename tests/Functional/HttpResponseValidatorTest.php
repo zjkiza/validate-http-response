@@ -59,7 +59,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
-        restore_exception_handler();
+        \restore_exception_handler();
 
         $result = Result::success($response)
             ->bind($this->handlerFactory->create(HttpResponseLoggerHandler::class)->setExpectedStatus(201)->addSensitiveKeys(['tokenTTL']))
@@ -101,7 +101,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
-        restore_exception_handler();
+        \restore_exception_handler();
 
         $result = Result::success($response)
             ->bind(
@@ -181,7 +181,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $client = new MockHttpClient($mockResponse);
         $response = $client->request('GET', 'https://example.com');
-        restore_exception_handler();
+        \restore_exception_handler();
 
         $result = Result::success($response)
             ->bind($this->handlerFactory->create(ExtractResponseJsonHandler::class)->setAssociative());
@@ -219,7 +219,7 @@ final class HttpResponseValidatorTest extends KernelTestCase
 
         $result = Result::success($data)
             ->bind($this->handlerFactory->create(ValidateArrayKeysExistHandler::class)->setKeys(['name', 'lorem']));
-        restore_exception_handler();
+        \restore_exception_handler();
 
 
         $this->expectException(InvalidArgumentException::class);
@@ -228,7 +228,43 @@ final class HttpResponseValidatorTest extends KernelTestCase
             [
                 'level' => 'error',
                 'message' => function (string $message) {
-                    $pattern = '/^\[ZJKiza\\\HttpResponseValidator\\\Handler\\\ValidateArrayKeyExistHandler\] Message ID=[a-f0-9]+ :  PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ValidateArrayKeyExistHandler\] There is no required field "lorem" in the array \(name, email\)\.$/';
+                    $pattern = $pattern = '/^\[ZJKiza\\\\HttpResponseValidator\\\\Handler\\\\ValidateArrayKeysExistHandler\] Message ID=[a-f0-9]+ :  PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ValidateArrayKeysExistHandler\] There is no required fields "lorem" in the array \(name, email\)\.$/';
+                    self::assertThat($message, new RegularExpression($pattern));
+                },
+                'context' => function ($trace) {
+                    $this->assertIsArray($trace);
+                },
+
+            ],
+        ];
+
+        PhpUnitTool::assertArrayRecords($logger->records, $expected);
+
+        $result->getOrThrow();
+    }
+
+    public function testExpectExceptionForValidateArrayKeysWhereKeyNotExistWithMorKeys(): void
+    {
+        $data = [
+            'name' => 'Foo',
+            'email' => 'foo@test.com',
+        ];
+
+        /** @var TestLogger $logger */
+        $logger = $this->getContainer()->get(TestLogger::class);
+
+        $result = Result::success($data)
+            ->bind($this->handlerFactory->create(ValidateArrayKeysExistHandler::class)->setKeys(['name', 'lorem', 'bar']));
+        \restore_exception_handler();
+
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $expected = [
+            [
+                'level' => 'error',
+                'message' => function (string $message) {
+                    $pattern = '/^\[ZJKiza\\\\HttpResponseValidator\\\\Handler\\\\ValidateArrayKeysExistHandler\] Message ID=[a-f0-9]+ :  PHPUnit\\\\Framework\\\\TestCase::runTest -> \[ValidateArrayKeysExistHandler\] There is no required fields "lorem, bar" in the array \(name, email\)\.$/';
                     self::assertThat($message, new RegularExpression($pattern));
                 },
                 'context' => function ($trace) {
