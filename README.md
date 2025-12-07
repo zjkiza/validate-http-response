@@ -1,4 +1,4 @@
-# Http Response Validator Bundle
+0o# Http Response Validator Bundle
 
 A Symfony bundle for HTTP responses validating using a simple Result monad and handler chains.
 
@@ -10,7 +10,8 @@ The main idea: the input is `ResponseInterface` (eg from `symfony/http-client`),
 - Built-in ready-to-use handlers:
   - `ZJKiza\HttpResponseValidator\Handler\HttpResponseLoggerHandler` – validates the expected status, logs the response, and masks sensitive keys
   - `ZJKiza\HttpResponseValidator\Handler\ExtractResponseJsonHandler` – decodes the JSON body (associatively or as an object)
-  - `ZJKiza\HttpResponseValidator\Handler\ValidateArrayKeysExistHandler` – checks whether certain keys are present in the associative array
+  - `ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateExactHandler` – validates the structure of the response using strict/exact key and type checking
+  - `ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateInternalHandler` – validates the structure using internal/relaxed rules for key existence and potential type checking
 - Simple extension: add your own handler and register it with a single service tag
 - Clear error messages with `Message ID=<hex>` for easy tracking in logs
 
@@ -55,7 +56,8 @@ use ZJKiza\HttpResponseValidator\Monad\Result;
 use ZJKiza\HttpResponseValidator\Contract\HandlerFactoryInterface;
 use ZJKiza\HttpResponseValidator\Handler\HttpResponseLoggerHandler;
 use ZJKiza\HttpResponseValidator\Handler\ExtractResponseJsonHandler;
-use ZJKiza\HttpResponseValidator\Handler\ValidateArrayKeysExistHandler;
+use ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateExactHandler;
+use ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateInternalHandler;
 
 // ... in the service/controller with DI you get a handler factory
 public function __construct(private HandlerFactoryInterface $handlerFactory) {}
@@ -72,7 +74,7 @@ public function fetch(): array
             ->addSensitiveKeys(['password', 'token']))
         ->bind($this->handlerFactory->create(ExtractResponseJsonHandler::class)
             ->setAssociative(true))
-        ->bind($this->handlerFactory->create(ValidateArrayKeysExistHandler::class)
+        ->bind($this->handlerFactory->create(ArrayStructureValidateInternalHandler::class)
             ->setKeys(['id', 'email']))
         ->getOrThrow();
 
@@ -83,7 +85,7 @@ public function fetch(): array
 
 If a step fails, an exception will be thrown with a message containing a unique `Message ID=...', and the error will be logged via the PSR‑3 logger.
 
-## Ugrađeni handler‑i
+## Built-in Handlers
 
 All handlers implement `ZJKiza\HttpResponseValidator\Contract\HandlerInterface` and expose a fluent API for configuration.
 
@@ -96,13 +98,69 @@ All handlers implement `ZJKiza\HttpResponseValidator\Contract\HandlerInterface` 
 - `ExtractResponseJsonHandler`
   - What it does: calls `$response->getContent(false)`, decodes the JSON, and returns the result as a string or object
   - Essential methods:
-    - `setAssociative(bool $assoc = true): self` – when `true' returns an associative array; when `false' is an object
+    - `setAssociative(bool $assoc = true): self` – when `true` returns an associative array; when `false` is an object
 
-- `ValidateArrayKeysExistHandler`
-  - What it does: Checks whether the passed associative string contains required keys
+- `ArrayStructureValidateExactHandler`
+  - What it does: Validates array structure with **exact** match: same keys as expected, possible deep (nested), optional type checks
   - Essential methods:
-    - `setKeys(string[] $keys): self`
+    - `setKeys(array $structure): self` – associative or indexed array describing expected structure
+    - `setIgnoreNulls(bool $ignoreNulls = false): self` – ignore null values if set
+    - `setCheckTypes(bool $checkTypes = false): self` – enable type checking when structure contains types
 
+- `ArrayStructureValidateInternalHandler`
+  - What it does: Validates array structure with more internally permissive (flexible) rules, suitable for partial checks.
+  - Essential methods:
+    - `setKeys(array $structure): self`
+    - `setIgnoreNulls(bool $ignoreNulls = false): self`
+    - `setCheckTypes(bool $checkTypes = false): self`
+
+## Direct Use: ArrayStructureExactValidation and ArrayStructureInternalValidation
+
+Validation services can be used standalone without the handler pipeline.
+For example, to validate data against a strict structure:
+
+```php
+use ZJKiza\HttpResponseValidator\Validator\ArrayStructureExactValidation;
+use ZJKiza\HttpResponseValidator\Validator\Helper\ErrorCollector;
+
+$validator = new ArrayStructureExactValidation(new ErrorCollector(), $ignoreNulls = false, $checkTypes = true);
+
+$validator->validate($structure, $data);
+
+if ($validator->getErrorCollector()->hasErrors()) {
+    // Handle or inspect `$validator->getErrorCollector()->all()`
+}
+```
+
+For internal/permissive validation:
+
+```php
+use ZJKiza\HttpResponseValidator\Validator\ArrayStructureInternalValidation;
+use ZJKiza\HttpResponseValidator\Validator\Helper\ErrorCollector;
+
+$validator = new ArrayStructureInternalValidation(new ErrorCollector(), $ignoreNulls = false, $checkTypes = true);
+
+$validator->validate($structure, $data);
+
+if ($validator->getErrorCollector()->hasErrors()) {
+    // Handle or inspect errors
+}
+```
+
+## Example (Handler Pipeline)
+
+```php
+// ...
+$data = Result::success($response)
+    ->bind($this->handlerFactory->create(HttpResponseLoggerHandler::class)->setExpectedStatus(200))
+    ->bind($this->handlerFactory->create(ExtractResponseJsonHandler::class)->setAssociative(true))
+    ->bind($this->handlerFactory->create(ArrayStructureValidateExactHandler::class)
+        ->setKeys($requiredStructure)
+        ->setCheckTypes(true)
+        ->setIgnoreNulls(false)
+    )
+    ->getOrThrow();
+```
 
 ## How to add your own Handler
 
@@ -181,4 +239,5 @@ MIT. View the `LICENSE' file in the repository.
 
 ## What else needs to be done
 [ ] Update readme
+
 [+] When ValidateArrayKeysExistHandler encounters the first error in the keys, it does not immediately throw an exception, but collects all the missing keys and only then throws the exception. 

@@ -75,7 +75,6 @@ final class HttpResponseLogger
      * @return array{
      *      method: string,
      *      url: string,
-     *      options: mixed,
      *      code: int,
      *      body: string
      * }

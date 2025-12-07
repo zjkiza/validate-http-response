@@ -10,7 +10,15 @@ services:
     ZJKiza\HttpResponseValidator\Monad\Success: ~
     ZJKiza\HttpResponseValidator\Monad\Failure: ~
 
+    ZJKiza\HttpResponseValidator\Validator\Helper\ErrorCollector: ~
+
     ZJKiza\HttpResponseValidator\HttpLogger\HttpResponseLogger:
+        public: true
+
+    ZJKiza\HttpResponseValidator\Validator\ArrayStructureExactValidation:
+        public: true
+
+    ZJKiza\HttpResponseValidator\Validator\ArrayStructureInternalValidation:
         public: true
 
     # Handler services
@@ -24,10 +32,15 @@ services:
         tags:
           - { name: 'zjkiza.http_response_validate.handler_factory'}
 
-    ZJKiza\HttpResponseValidator\Handler\ValidateArrayKeysExistHandler:
+    ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateExactHandler:
         public: true
         tags:
-          - { name: 'zjkiza.http_response_validate.handler_factory'}
+          - { name: 'zjkiza.http_response_validate.handler_factory' }
+
+    ZJKiza\HttpResponseValidator\Handler\ArrayStructureValidateInternalHandler:
+      public: true
+      tags:
+        - { name: 'zjkiza.http_response_validate.handler_factory' }
 
     handler_factory:
         public: true
